@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Heart For You</title>
+  <style>
+    *{
+      box-sizing:border-box;
+      margin:0;
+      padding:0;
+    }
+
+    body{
+      overflow:hidden;
+      background: radial-gradient(circle at center, #0d1430 0%, #050816 55%, #02030a 100%);
+      font-family: "Courier New", monospace;
+      min-height:100vh;
+    }
+
+    canvas{
+      position:fixed;
+      inset:0;
+      display:block;
+    }
+
+    .centerText{
+      position:fixed;
+      top:50%;
+      left:50%;
+      transform:translate(-50%,-50%);
+      color:white;
+      text-align:center;
+      z-index:10;
+      pointer-events:none;
+      text-shadow:0 0 12px rgba(255,77,141,0.6);
+    }
+
+    .centerText h1{
+      font-size:clamp(28px, 4vw, 56px);
+      margin-bottom:10px;
+      color:#fff;
+    }
+
+    .centerText p{
+      font-size:clamp(14px, 2vw, 20px);
+      color:#ffd6e5;
+      letter-spacing:2px;
+    }
+
+    .backBtn{
+      position:fixed;
+      top:20px;
+      left:20px;
+      padding:12px 18px;
+      background:rgba(255,77,141,0.15);
+      border:1px solid rgba(255,77,141,0.45);
+      color:#fff;
+      text-decoration:none;
+      border-radius:12px;
+      z-index:20;
+      backdrop-filter: blur(8px);
+      box-shadow:0 0 18px rgba(255,77,141,0.18);
+      transition:0.3s ease;
+    }
+
+    .backBtn:hover{
+      background:rgba(255,77,141,0.28);
+      transform:translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="backBtn">← Back</a>
+
+  <div class="centerText">
+    <h1>I love you 🥚🤍</h1>
+    <p>my heart keeps choosing you</p>
+  </div>
+
+  <canvas id="c"></canvas>
+
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+
+    let w = canvas.width = window.innerWidth;
+    let h = canvas.height = window.innerHeight;
+
+    const phrase = "I love you";
+    const points = [];
+    const sparkles = [];
+
+    const config = {
+      scale: Math.min(w, h) / 38,
+      count: 140,
+      fontSize: 15,
+      glow: "#ff4d8d",
+      textColor: "#ffd1e1",
+      rotationSpeed: 0.0003, 
+      beatStrength: 0.04
+    };
+
+    function heartX(t) {
+      return 16 * Math.pow(Math.sin(t), 3);
+    }
+
+    function heartY(t) {
+      return 13 * Math.cos(t) -
+             5 * Math.cos(2 * t) -
+             2 * Math.cos(3 * t) -
+             Math.cos(4 * t);
+    }
+
+    function buildHeartPoints() {
+      points.length = 0;
+
+      for (let i = 0; i < config.count; i++) {
+        const t = (i / config.count) * Math.PI * 2;
+        points.push({
+          angle: t,
+          offset: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    function buildSparkles() {
+      sparkles.length = 0;
+      for (let i = 0; i < 80; i++) {
+        sparkles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.8,
+          a: Math.random() * 0.8 + 0.2,
+          speed: Math.random() * 0.4 + 0.1
+        });
+      }
+    }
+
+    function drawBackgroundGlow(time) {
+      const pulse = 1 + Math.sin(time * 0.002) * 0.04;
+      const size = config.scale * 18 * pulse;
+
+      const grad = ctx.createRadialGradient(
+        w / 2, h / 2, 10,
+        w / 2, h / 2, size
+      );
+      grad.addColorStop(0, "rgba(255,77,141,0.12)");
+      grad.addColorStop(0.45, "rgba(255,77,141,0.06)");
+      grad.addColorStop(1, "rgba(255,77,141,0)");
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function drawSparkles() {
+      for (const s of sparkles) {
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        s.y -= s.speed;
+        if (s.y < -10) {
+          s.y = h + 10;
+          s.x = Math.random() * w;
+        }
+      }
+    }
+
+    function drawHeartText(time) {
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${config.fontSize}px Courier New, monospace`;
+
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+
+        // Clockwise movement along the heart path
+        const t = p.angle - time * config.rotationSpeed;
+
+        // Heart coordinates recalculated continuously
+        const baseX = heartX(t) * config.scale;
+        const baseY = -heartY(t) * config.scale;
+
+        // Gentle heartbeat while preserving shape
+        const beat = 1 + Math.sin(time * 0.004 + p.offset) * config.beatStrength;
+
+        const x = w / 2 + baseX * beat;
+        const y = h / 2 + baseY * beat;
+
+        ctx.shadowColor = config.glow;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = config.textColor;
+        ctx.fillText(phrase, x, y);
+      }
+    }
+
+    function animate(time) {
+      ctx.clearRect(0, 0, w, h);
+
+      drawBackgroundGlow(time);
+      drawSparkles();
+      drawHeartText(time);
+
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener("resize", () => {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      config.scale = Math.min(w, h) / 38;
+      buildHeartPoints();
+      buildSparkles();
+    });
+
+    buildHeartPoints();
+    buildSparkles();
+    animate(0);
+  </script>
+</body>
+</html>
